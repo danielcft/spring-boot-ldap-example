@@ -1,19 +1,42 @@
 package dk.digitalidentity;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ApplicationContext;
+import org.springframework.ldap.core.LdapTemplate;
+import org.springframework.ldap.filter.AndFilter;
+import org.springframework.ldap.filter.EqualsFilter;
 
-import dk.digitalidentity.app.ActiveDirectoryHelper;
+import dk.digitalidentity.app.LdapPerson;
+import dk.digitalidentity.app.PersonRepo;
 
 @SpringBootApplication
-public class Application {
+public class Application implements CommandLineRunner {
+
+	@Autowired
+	LdapTemplate ldapTemplate;
+
+	public void run(String... args) {
+
+		PersonRepo dao = new PersonRepo();
+		dao.setLdapTemplate(ldapTemplate);
+
+		AndFilter andFilter = new AndFilter();
+		andFilter.and(new EqualsFilter("objectclass", "person"));
+		andFilter.and(new EqualsFilter("sAMAccountName", "daniel"));
+		andFilter.and(new EqualsFilter("memberof", "CN=TestGroup,DC=example,DC=org"));
+
+		List<LdapPerson> allPerson = dao.getAllPerson(andFilter);
+		for (LdapPerson p : allPerson) {
+			System.out.println(p.getCn());
+		}
+	}
 
 	public static void main(String[] args) {
-		ApplicationContext ctx = SpringApplication.run(Application.class, args);
-		ActiveDirectoryHelper activeDirectoryHelper = ctx.getBean(ActiveDirectoryHelper.class);
-		boolean result = activeDirectoryHelper.authenticate("baseDN","password");
-		System.out.println( (result == true) ? "logged in" : "not logged in");
+		SpringApplication.run(Application.class, args);
 	}
 
 }
